@@ -78,18 +78,20 @@ def evalF(start_node, goal, heu='manhattan'):
 # @jit(target_backend='cuda') 
 def belongs(node, list_of_node, heu='misplaced'):
     for single_node in list_of_node:
-        if evalH(node.data, single_node[0].data, heu) == 0:
+        if evalH(node.data, single_node.data, heu) == 0:
             return True
     return False
 
 
 class Node:
 
-    def __init__(self, data, level, f):
+    def __init__(self, data, level, f, parent=None, movement=None):
         #level=g, f = g+h
+        self.parent = parent
         self.data = data
         self.level = level
         self.f = f
+        self.movement = movement
 
     def getChildren(self):
         empty_slots = self.findEmpty(self.data)
@@ -102,19 +104,20 @@ class Node:
             for i, move in enumerate(moves):
                 # print(move)
                 child = self.move(self.data, x, y, move)
-                movement = ''
+                movement = ['','-']
                 if i == 0:
-                    movement = "Left"
+                    movement[0] = "Left"
                 if i == 1:
-                    movement = "Right"
+                    movement[0] = "Right"
                 if i == 2:
-                    movement = "Down"
+                    movement[0] = "Down"
                 if i == 3:
-                    movement = "Up"
+                    movement[0] = "Up"
                 if child:
                     val = self.data[move[0]][move[1]]
-                    child_node = Node(child, self.level+1, 0)
-                    children.append([child_node, (val, movement)])
+                    movement[1] = val
+                    child_node = Node(child, self.level+1, 0, self, movement)
+                    children.append(child_node)
         
         # print(children)
         return children
@@ -153,52 +156,60 @@ def userFileInputProcess(heu='manhattan'):
     opened = []
     closed = []
     start_node = Node(start, 0, 0)
-    start_node.f = evalF(start_node, goal, 'manhattan')
-    opened.append([start_node, '0','0'])
+    start_node.f = evalF(start_node, goal, heu)
+    opened.append(start_node)
     output_data = []
     count = 0
     sol_found = False
+    goal_node = start_node
     while opened:
         count += 1
-        if heu=='manhattan' and count> 1000:
+        if heu=='manhattan' and count>1500:
             return []
-        elif heu=='misplaced' and count>1800:
-            return []          
-        opened.sort(key=lambda x:x[0].f, reverse=True)
+        if heu=='misplaced' and count>2500:
+            return []
+             
+        opened.sort(key=lambda x:x.f, reverse=True)
         current_node = opened.pop()
-        current = current_node[0]
         closed.append(current_node)
-        output_data.append((current_node[1], current_node[2]))
-        if(evalH(current.data, goal, heu) == 0):
+        if(evalH(current_node.data, goal, heu) == 0):
             print("Success after {} expand".format(count))
+            goal_node = current_node
             sol_found = True
             break
+        
         best_child = None
         IN=False
-        for child_tuple in current.getChildren():
-            child = child_tuple[0]
-            output = child_tuple[1]
+        
+        for child in current_node.getChildren():
             
             isChildBelongsTo = belongs(child, (opened+closed))
             child.f = evalF(child, goal, heu)
             if not isChildBelongsTo:
-                opened.append([child, output[0], output[1]])
+                opened.append(child)
             
             if not best_child:
                 IN = not(isChildBelongsTo)
                 best_child = child
+                
             elif child.f < best_child.f and belongs(child, closed):
                 IN = not (isChildBelongsTo)
                 best_child = child
-        
+
         if not IN:
-            opened.append([best_child, output[0], output[1]])
+            opened.append(best_child)
     else:
         print("Faild to find the solution")
-    
-    output_data.pop(0)  
 
-    if  sol_found:
+    
+    if sol_found:
+        val = goal_node.movement
+        while val:
+            output_data.append((val[1], val[0]))
+            
+            goal_node = goal_node.parent
+            val = goal_node.movement
+        output_data.reverse() 
         s = copy.deepcopy(output_data)
     else:
         s = "Failed to find the solution"
@@ -230,56 +241,64 @@ def randomEvaluatorProcess(iteration=100):
         closed = []
         start_node = Node(start, 0, 0)
         start_node.f = evalF(start_node, goal, heu)
-        opened.append([start_node, '0','0'])
+        opened.append(start_node)
         output_data = []
         count = 0
         sol_found = False
+        goal_node = start_node
         while opened:
-            count += 1
-            if heu=='manhattan' and count> 1000:
+            count += 1 
+            if heu=='manhattan' and count>1500:
                 return []
-            elif heu=='misplaced' and count>1800:
-                return []          
-            opened.sort(key=lambda x:x[0].f, reverse=True)
+            if heu=='misplaced' and count>2500:
+                return []
+            
+            opened.sort(key=lambda x:x.f, reverse=True)
             current_node = opened.pop()
-            current = current_node[0]
             closed.append(current_node)
-            output_data.append((current_node[1], current_node[2]))
-            if(evalH(current.data, goal, heu) == 0):
+
+            if(evalH(current_node.data, goal, heu) == 0):
                 print("Success after {} expand".format(count))
+                goal_node = current_node
                 sol_found = True
                 break
+            
             best_child = None
             IN=False
-            for child_tuple in current.getChildren():
-                child = child_tuple[0]
-                output = child_tuple[1]
+            
+            for child in current_node.getChildren():
                 
                 isChildBelongsTo = belongs(child, (opened+closed))
                 child.f = evalF(child, goal, heu)
                 if not isChildBelongsTo:
-                    opened.append([child, output[0], output[1]])
-                
+                    opened.append(child)
+                    
                 if not best_child:
                     IN = not(isChildBelongsTo)
                     best_child = child
+                    
                 elif child.f < best_child.f and belongs(child, closed):
                     IN = not (isChildBelongsTo)
                     best_child = child
             
             if not IN:
-                opened.append([best_child, output[0], output[1]])
+                opened.append(best_child)
         else:
             print("Faild to find the solution")
     
-        output_data.pop(0)
         
         if sol_found:
+            val = goal_node.movement
+            while val:
+                output_data.append((val[1], val[0]))
+                goal_node = goal_node.parent
+                val = goal_node.movement
+            output_data.reverse()
             return output_data
         else:
             return []
     
-    def rearranch(array2d, iteration=random.randrange(10,21)):
+    def rearranch(array2d, iteration=random.randrange(20,30)):
         for _ in range(iteration):
             
             empty_slots = []
@@ -306,19 +325,20 @@ def randomEvaluatorProcess(iteration=100):
     for i in range(iteration):
         
         n = random.randint(5,20)
-        n = 4
+        # n = 25
         start = getRandom(n)
+        # goal = getRandom(n)
         goal = copy.deepcopy(start)
         rearranch(start)
         
         output_manhattan = getOutput(start, goal, 'manhattan')
-        output_misplaced = getOutput(start, goal, 'misplaced')
+        manhattan = 'inf' if len(output_manhattan) == 0 else str(len(output_manhattan))
         
-        misplaced = 'inf' if len(output_misplaced) == 0 else str(len(output_misplaced))
-        if misplaced != 'inf':
-            manhattan = 'inf' if len(output_manhattan) == 0 else str(len(output_manhattan))
-            print((str(misplaced) + '\t' + str(manhattan)))
-            output.append((str(misplaced) + '     -     ' + str(manhattan)))
+        if manhattan !='inf':
+          output_misplaced = getOutput(start, goal, 'misplaced')
+          misplaced = 'inf' if len(output_misplaced) == 0 else str(len(output_misplaced))
+          print((str(misplaced) + '\t' + str(manhattan)))
+          output.append((str(misplaced) + '     -     ' + str(manhattan)))
 
     writeDoc = '\n'.join(output)
     writeDoc = 'misplaced   manhattan\n' + writeDoc
@@ -327,8 +347,8 @@ def randomEvaluatorProcess(iteration=100):
         f.write(writeDoc)
         
         
-        
-            
+# userFileInputProcess()       
+# randomEvaluatorProcess(iteration=1)            
 while True:
     selection = input("\nSelect the option of operation using the integer value.\n1.Solve the n-puzzle problem in from the file.\n2.Solve the n-puzzle problem for random generator.\nAny other key to exit the program.\n\t: ")
     if(selection == '1'):
