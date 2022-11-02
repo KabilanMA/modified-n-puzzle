@@ -1,1 +1,1 @@
-(7,left), (11, up), (8,right), (6, down), (5, up)
+(7, left), (5, up), (11, up), (8, right), (6, down)

@@ -1,5 +1,11 @@
 import random
 import copy
+import sys
+
+start_file_name = str(sys.argv[1].strip())
+goal_file_name = str(sys.argv[2].strip())
+
+print(start_file_name, goal_file_name)
 
 def printPretty(array2D):
     for i in range(len(array2D)):
@@ -215,27 +221,33 @@ def randomEvaluatorProcess(iteration=100):
     with open('random.txt','w') as f:
         f.write(writeDoc)
 
-def userFileInputProcess(heu='manhattan'):
-    start = accept(input("Enter the Start Configuration File Name(with .txt extension): "))
-    goal = accept(input("Enter the Goal Configuration File Name(with .txt extension): "))
-    output_file_name = input('Enter output File Name: ')
+def userFileInputProcess(start=None, goal = None, heu='manhattan'):
+    
+    if (start==None or goal==None):
+        start = accept(input("Enter the Start Configuration File Name(with .txt extension): "))
+        goal = accept(input("Enter the Goal Configuration File Name(with .txt extension): "))
+    else:
+        start = accept(start)
+        goal = accept(goal)
+    
+    output_file_name = 'Sample_Output.txt'
     
     
     def getMove(fromState, toState, empty='-'):
         n = len(fromState.data)
-        temp = (None, None)
+        temp = ''
         for i in range(n):
             for j in range(n):
                 if fromState.data[i][j] != toState.data[i][j] and fromState.data[i][j] != empty:
                     
                     if i-1>=0 and fromState.data[i][j] == toState.data[i-1][j]:
-                        temp = fromState.data[i][j], "Up"
+                        temp = '({}, {})'.format(int(fromState.data[i][j]), "up")
                     elif i+1 <= n-1 and fromState.data[i][j] == toState.data[i+1][j]:
-                        temp = fromState.data[i][j], "Down"
+                        temp = "({}, {})".format(int(fromState.data[i][j]), "down")
                     elif j-1>=0 and fromState.data[i][j] == toState.data[i][j-1]:
-                        temp = fromState.data[i][j], "Left"
+                        temp = "({}, {})".format(int(fromState.data[i][j]), "left")
                     elif j+1 <= n-1 and fromState.data[i][j] == toState.data[i][j+1]:
-                        temp = fromState.data[i][j], "Right"
+                        temp = "({}, {})".format(int(fromState.data[i][j]), "right")
                     break
         return str(temp)
                         
@@ -294,14 +306,16 @@ def userFileInputProcess(heu='manhattan'):
             f.write(s)
        
            
-while True:
-    selection = input("\nSelect the option of operation using the integer value.\n1.Solve the n-puzzle problem in from the file.\n2.Solve the n-puzzle problem for random generator.\nAny other key to exit the program.\n\t: ")
-    if(selection == '1'):
-        userFileInputProcess()
-    elif selection == '2':
-        try:
-            randomEvaluatorProcess(int(input("Enter the number of problems to solve(Enter only integer). Result will be saved in random.txt file: ")))
-        except Exception as e:
-            print("Only enter integer number")
-    else:
-        break
+# while True:
+#     selection = input("\nSelect the option of operation using the integer value.\n1.Solve the n-puzzle problem in from the file.\n2.Solve the n-puzzle problem for random generator.\nAny other key to exit the program.\n\t: ")
+#     if(selection == '1'):
+#         userFileInputProcess()
+#     elif selection == '2':
+#         try:
+#             randomEvaluatorProcess(int(input("Enter the number of problems to solve(Enter only integer). Result will be saved in random.txt file: ")))
+#         except Exception as e:
+#             print("Only enter integer number")
+#     else:
+#         break
+
+userFileInputProcess(start = start_file_name, goal = goal_file_name)
